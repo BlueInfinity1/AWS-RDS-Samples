@@ -1,5 +1,3 @@
-// A Lamdba function for fetching local high scores in a given country, and finding the player's own rank within those scores
-
 import mysql from 'mysql2/promise';
 
 // RDS configuration (mock values)
@@ -29,10 +27,11 @@ export const handler = async (event) => {
 
       // Query to get the top high scores for the specified country
       const [rows] = await connection.execute(
-        `SELECT playerId, pName, highScore 
-         FROM Players 
-         WHERE countryCode = ? 
-         ORDER BY highScore DESC 
+        `SELECT p.playerId, p.pName, h.highScore 
+         FROM Players p
+         JOIN PlayerActivity h ON p.playerId = h.playerId
+         WHERE p.countryCode = ? 
+         ORDER BY h.highScore DESC 
          LIMIT ?`,
         [countryCode, TOP_LIMIT]
       );
@@ -57,9 +56,10 @@ export const handler = async (event) => {
       // If the player is not in the top scores, get their rank and score separately
       if (!playerInTop) {
         const [playerRow] = await connection.execute(
-          `SELECT highScore 
-           FROM Players 
-           WHERE playerId = ? AND countryCode = ?`,
+          `SELECT h.highScore 
+           FROM Players p
+           JOIN PlayerActivity h ON p.playerId = h.playerId
+           WHERE p.playerId = ? AND p.countryCode = ?`,
           [playerId, countryCode]
         );
 
@@ -69,8 +69,9 @@ export const handler = async (event) => {
           // Optimized query to get the player's rank using an indexed `highScore` column and countryCode filter
           const [[{ rank: playerRank }]] = await connection.execute(
             `SELECT COUNT(*) + 1 AS rank 
-             FROM Players 
-             WHERE highScore > ? AND countryCode = ?`,
+             FROM PlayerActivity h
+             JOIN Players p ON p.playerId = h.playerId
+             WHERE h.highScore > ? AND p.countryCode = ?`,
             [playerHighScore, countryCode]
           );
 
