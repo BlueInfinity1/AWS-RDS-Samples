@@ -32,6 +32,7 @@ export const handler = async (event) => {
         `SELECT p.playerId, p.pName, h.highScore 
          FROM Players p
          JOIN PlayerActivity h ON p.playerId = h.playerId
+         USE INDEX (idx_highScore) -- Force the use of the highScore index
          WHERE p.countryCode = ? 
          ORDER BY h.highScore DESC 
          LIMIT ?`,
@@ -61,6 +62,7 @@ export const handler = async (event) => {
           `SELECT h.highScore 
            FROM Players p
            JOIN PlayerActivity h ON p.playerId = h.playerId
+           USE INDEX (idx_highScore) -- Force the use of the highScore index
            WHERE p.playerId = ? AND p.countryCode = ?`,
           [playerId, countryCode]
         );
@@ -73,6 +75,7 @@ export const handler = async (event) => {
             `SELECT COUNT(*) + 1 AS rank 
              FROM PlayerActivity h
              JOIN Players p ON p.playerId = h.playerId
+             USE INDEX (idx_highScore) -- Force the use of the highScore index
              WHERE h.highScore > ? AND p.countryCode = ?`,
             [playerHighScore, countryCode]
           );
